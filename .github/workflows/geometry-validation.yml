@@ -1,0 +1,43 @@
+name: Geometry Engine Validation
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "scanfix/**"
+      - "tools/scanfix_geometry.py"
+      - "tests/**"
+      - "requirements-engine.txt"
+      - ".github/workflows/geometry-validation.yml"
+  pull_request:
+    paths:
+      - "scanfix/**"
+      - "tools/scanfix_geometry.py"
+      - "tests/**"
+      - "requirements-engine.txt"
+      - ".github/workflows/geometry-validation.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install engine dependencies
+        run: python -m pip install -r requirements-engine.txt
+
+      - name: Compile Python
+        run: python -m py_compile scanfix/__init__.py scanfix/geometry.py tools/scanfix_geometry.py
+
+      - name: Run unit tests
+        run: python -m pytest -q
+
+      - name: Repository status
+        run: git status --short
