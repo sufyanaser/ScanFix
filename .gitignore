@@ -1,0 +1,13 @@
+# Golden Dataset source material is local by default.
+# Never commit real administrative documents, IDs, signatures, stamps, or private WhatsApp media.
+datasets/golden/samples/**
+!datasets/golden/samples/README.md
+
+# Local evaluation artifacts
+datasets/golden/results/**
+!datasets/golden/results/README.md
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
