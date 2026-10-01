@@ -1,0 +1,38 @@
+{
+  "case_id": "GD-908",
+  "source": {
+    "filename": "gd-908-synthetic-placeholder.png",
+    "sha256": "9088888888888888888888888888888888888888888888888888888888888888",
+    "mime_type": "image/png",
+    "width_px": 1600,
+    "height_px": 2200,
+    "provenance": "synthetic",
+    "sensitive": false,
+    "notes": "Manifest-only bootstrap fixture. Partial/occluded page; automatic correction should stop."
+  },
+  "taxonomy": [
+    "partial-page",
+    "occluded-edge",
+    "signature"
+  ],
+  "ground_truth": {
+    "page_corners_px": null,
+    "orientation_deg": 0,
+    "deskew_deg": 0,
+    "reference_notes": "Bootstrap fixture; replace with measured ground truth when a matching synthetic image is introduced."
+  },
+  "expected": {
+    "auto_process_allowed": false,
+    "manual_review_allowed": true,
+    "content_reconstruction_allowed": false,
+    "must_preserve_color": false,
+    "must_preserve_stamp": false,
+    "must_preserve_signature": true,
+    "expected_failure_mode": "manual-review"
+  },
+  "review": {
+    "status": "approved",
+    "reviewer": "bootstrap",
+    "review_notes": "Synthetic manifest fixture for test coverage only."
+  }
+}
