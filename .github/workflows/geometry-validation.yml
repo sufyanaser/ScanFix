@@ -7,6 +7,7 @@ on:
       - "scanfix/**"
       - "tools/scanfix_geometry.py"
       - "tools/evaluate_golden.py"
+      - "tools/review_corners.py"
       - "tests/**"
       - "requirements-engine.txt"
       - ".github/workflows/geometry-validation.yml"
@@ -45,7 +46,10 @@ jobs:
           scanfix/pdf_export.py
           scanfix/evaluation.py
           scanfix/preview.py
+          scanfix/review.py
+          scanfix/review_html.py
           tools/scanfix_geometry.py
+          tools/review_corners.py
           tools/evaluate_golden.py
 
       - name: Run unit tests
