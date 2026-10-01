@@ -196,6 +196,23 @@ def detect_bright_page_candidate(image: np.ndarray) -> SegmentationCandidate:
     touched = _border_sides_touched(corners, w, h)
 
     if area_ratio >= 0.97:
+        # A full-frame bright/gray field is not enough to call something a document.
+        # Require visible content/texture evidence so blank walls or uniform frames
+        # do not become false-positive pages.
+        contrast_std = float(gray.std())
+        edge_density = float(
+            np.count_nonzero(cv2.Canny(gray, 50, 150))
+            / max(gray.size, 1)
+        )
+        if contrast_std < 12.0 and edge_density < 0.002:
+            return SegmentationCandidate(
+                None,
+                0.0,
+                True,
+                "no-document-content",
+                round(float(area_ratio), 4),
+            )
+
         if _stacked_page_hint(gray):
             return SegmentationCandidate(
                 _order_points(corners / scale),
