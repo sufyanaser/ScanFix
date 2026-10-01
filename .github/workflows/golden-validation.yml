@@ -1,0 +1,40 @@
+name: Golden Dataset Validation
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "datasets/golden/**"
+      - "tools/golden_*.py"
+      - "requirements-dev.txt"
+      - ".github/workflows/golden-validation.yml"
+  pull_request:
+    paths:
+      - "datasets/golden/**"
+      - "tools/golden_*.py"
+      - "requirements-dev.txt"
+      - ".github/workflows/golden-validation.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Compile tools
+        run: python -m py_compile tools/golden_ingest.py tools/validate_golden.py
+
+      - name: Validate Golden Dataset
+        run: python tools/validate_golden.py
+
+      - name: Show repository status
+        run: git status --short
