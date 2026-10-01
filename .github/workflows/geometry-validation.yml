@@ -43,6 +43,7 @@ jobs:
           scanfix/quality.py
           scanfix/pdf_export.py
           scanfix/evaluation.py
+          scanfix/preview.py
           tools/scanfix_geometry.py
           tools/evaluate_golden.py
 
