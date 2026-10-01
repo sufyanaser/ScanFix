@@ -6,7 +6,7 @@ ScanFix is a Windows-focused document rectification utility for safely convertin
 
 `develop` is the development source of truth.
 
-The current milestone is the **Golden Dataset + Acceptance Criteria baseline**. It now includes 12 manifest-only bootstrap fixtures, a local ingest CLI, schema validation, and CI validation. No image-processing engine or OCR is included yet.
+The project now includes the **Golden Dataset baseline** and **Geometry Engine V0.1**. The engine provides conservative page detection, manual-corner fallback, perspective rectification, deskew, CLI reporting, unit tests, and CI validation. OCR and generative processing remain out of scope.
 
 ## Baseline documents
 
@@ -17,6 +17,7 @@ The current milestone is the **Golden Dataset + Acceptance Criteria baseline**. 
 - [Golden Dataset schema](datasets/golden/manifest.schema.json)
 - [Example manifest](datasets/golden/manifest.example.json)
 - [Golden Dataset usage](docs/golden-dataset-usage.md)
+- [Geometry Engine V0.1](docs/geometry-engine-v0.1.md)
 
 ## Safety principle
 
@@ -28,15 +29,16 @@ If ScanFix is uncertain, it must stop, warn, or request human review rather than
 
 Real administrative documents, IDs, signatures, stamps, and private WhatsApp media are ignored by Git by default. Public repository samples should be synthetic, public-domain, or explicitly de-identified and approved for publication.
 
-## Next engineering milestone
+## Current engine milestone
 
-Build a minimal deterministic geometry engine and CLI for:
+Geometry Engine V0.1 implements:
 
-1. source preservation + SHA-256
-2. page-boundary detection
-3. orientation
-4. four-corner perspective correction
-5. deskew
-6. manual-review routing
+1. source SHA-256 reporting
+2. page-boundary detection with confidence gating
+3. manual four-corner fallback
+4. perspective rectification
+5. residual deskew
+6. safe review routing when auto-detection is uncertain
+7. unit tests and GitHub Actions validation
 
-OCR, ML dewarping, PDF/A, batch processing, and generative enhancement remain out of scope until the geometry engine passes the Golden Dataset gates.
+Next: run the engine against real Golden Dataset images, tune thresholds from evidence, then add PDF export. OCR, ML dewarping, batch processing, and generative enhancement remain out of scope.
