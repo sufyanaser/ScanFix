@@ -1,0 +1,38 @@
+{
+  "case_id": "GD-902",
+  "source": {
+    "filename": "gd-902-synthetic-placeholder.png",
+    "sha256": "9022222222222222222222222222222222222222222222222222222222222222",
+    "mime_type": "image/png",
+    "width_px": 1600,
+    "height_px": 2200,
+    "provenance": "synthetic",
+    "sensitive": false,
+    "notes": "Manifest-only bootstrap fixture. Mild perspective and small skew."
+  },
+  "taxonomy": [
+    "mild-perspective",
+    "deskew",
+    "eastern-arabic-digits"
+  ],
+  "ground_truth": {
+    "page_corners_px": null,
+    "orientation_deg": 0,
+    "deskew_deg": 1.2,
+    "reference_notes": "Bootstrap fixture; replace with measured ground truth when a matching synthetic image is introduced."
+  },
+  "expected": {
+    "auto_process_allowed": true,
+    "manual_review_allowed": true,
+    "content_reconstruction_allowed": false,
+    "must_preserve_color": false,
+    "must_preserve_stamp": false,
+    "must_preserve_signature": false,
+    "expected_failure_mode": null
+  },
+  "review": {
+    "status": "approved",
+    "reviewer": "bootstrap",
+    "review_notes": "Synthetic manifest fixture for test coverage only."
+  }
+}
