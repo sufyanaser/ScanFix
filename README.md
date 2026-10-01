@@ -6,7 +6,7 @@ ScanFix is a Windows-focused document rectification utility for safely convertin
 
 `develop` is the development source of truth.
 
-The project now includes the **Golden Dataset baseline** and **Geometry Engine V0.3**. The engine provides conservative multi-pass page detection, brightness-segmentation fallback for real phone photos, confidence gating, cropped/stacked-page review routing, manual-corner fallback, perspective rectification, deskew, basic quality warnings, preview overlays, raster PDF export, local Golden Dataset evaluation, unit tests, and CI validation. OCR and generative processing remain out of scope.
+The project now includes the **Golden Dataset baseline** and **Geometry Engine V0.4**. The engine provides conservative multi-pass page detection, brightness-segmentation fallback for real phone photos, confidence gating, cropped/stacked-page review routing, manual-corner fallback, perspective rectification, deskew, basic quality warnings, preview overlays, raster PDF export, local Golden Dataset evaluation, unit tests, and CI validation. OCR and generative processing remain out of scope.
 
 ## Baseline documents
 
@@ -20,6 +20,7 @@ The project now includes the **Golden Dataset baseline** and **Geometry Engine V
 - [Geometry Engine V0.1](docs/geometry-engine-v0.1.md)
 - [Geometry Engine V0.2](docs/geometry-engine-v0.2.md)
 - [First real sample evaluation](docs/real-sample-evaluation.md)
+- [Manual corner review](docs/manual-corner-review.md)
 
 ## Safety principle
 
@@ -47,6 +48,8 @@ Geometry Engine V0.3 implements:
 10. local Golden Dataset evaluation
 11. segmentation fallback for weak/fragmented page edges
 12. explicit `full-frame-document`, `partial-page-or-cropped`, and `stacked-pages-ambiguous` routing
-13. unit tests and GitHub Actions validation
+13. standalone HTML manual-corner review with draggable handles
+14. approved review.json input for the geometry CLI
+15. unit tests and GitHub Actions validation
 
 Next: run V0.2 against real local Golden Dataset images and tune thresholds from evidence. OCR, ML dewarping, batch processing, and generative enhancement remain out of scope.
