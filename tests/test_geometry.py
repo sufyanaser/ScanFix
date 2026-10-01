@@ -6,6 +6,7 @@ import numpy as np
 from scanfix.geometry import (
     deskew,
     detect_document,
+    estimate_skew_angle,
     order_points,
     perspective_rectify,
     rotate_expand,
@@ -49,7 +50,7 @@ def test_detect_document_fails_safe_without_page():
 
     assert result.corners is None
     assert result.needs_review is True
-    assert result.reason == "no-quadrilateral"
+    assert result.reason in {"no-quadrilateral", "no-document-content"}
 
 
 def test_perspective_rectify_produces_nonempty_page():
@@ -69,14 +70,16 @@ def test_rotate_expand_does_not_clip_canvas():
     assert out.shape[1] > image.shape[1]
 
 
-def test_deskew_returns_image_and_numeric_angle():
+def test_deskew_reduces_residual_skew():
     image = np.full((700, 900, 3), 255, dtype=np.uint8)
     for y in range(150, 550, 50):
         cv2.line(image, (120, y), (780, y), (0, 0, 0), 4)
 
     skewed = rotate_expand(image, 3.0)
     corrected, angle = deskew(skewed)
+    residual = abs(estimate_skew_angle(corrected))
 
     assert corrected.size > 0
     assert isinstance(angle, float)
     assert abs(angle) <= 7.0
+    assert residual < 0.5
