@@ -25,6 +25,7 @@ import numpy as np
 from scanfix.geometry import detect_document, deskew, order_points, perspective_rectify
 from scanfix.pdf_export import export_pdf
 from scanfix.quality import analyze_quality
+from scanfix.preview import draw_detection_preview
 
 
 def sha256_file(path: Path) -> str:
@@ -62,6 +63,7 @@ def main() -> int:
     ap.add_argument("--no-deskew", action="store_true")
     ap.add_argument("--report", type=Path, help="Optional JSON report path")
     ap.add_argument("--pdf", type=Path, help="Optional PDF output path")
+    ap.add_argument("--preview", type=Path, help="Optional detection preview image")
     ap.add_argument("--pdf-page", choices=["source", "a4"], default="source")
     args = ap.parse_args()
 
@@ -73,6 +75,7 @@ def main() -> int:
         else out.with_suffix(out.suffix + ".json")
     )
     pdf_path = args.pdf.expanduser().resolve() if args.pdf else None
+    preview_path = args.preview.expanduser().resolve() if args.preview else None
 
     if not src.is_file():
         raise SystemExit(f"Input not found: {src}")
@@ -103,6 +106,17 @@ def main() -> int:
         needs_review = detection.needs_review
         area_ratio = detection.area_ratio
 
+        if preview_path is not None:
+            preview = draw_detection_preview(
+                image,
+                corners,
+                confidence=confidence,
+                reason=detection_reason,
+            )
+            preview_path.parent.mkdir(parents=True, exist_ok=True)
+            if not cv2.imwrite(str(preview_path), preview):
+                raise SystemExit(f"Failed to write preview: {preview_path}")
+
         if corners is None or needs_review:
             report = {
                 "status": "needs-review",
@@ -131,6 +145,8 @@ def main() -> int:
             print(f"Confidence: {confidence:.4f}")
             if quality.warnings:
                 print("Quality warnings: " + ", ".join(quality.warnings))
+            if preview_path is not None:
+                print(f"Preview: {preview_path}")
             print(f"Report: {report_path}")
             return 2
 
@@ -194,6 +210,8 @@ def main() -> int:
 
     print("PASS")
     print(f"Output: {out}")
+    if preview_path is not None:
+        print(f"Preview: {preview_path}")
     if pdf_path is not None:
         print(f"PDF: {pdf_path}")
     if quality.warnings:
