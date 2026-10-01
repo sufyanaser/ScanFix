@@ -6,7 +6,7 @@ ScanFix is a Windows-focused document rectification utility for safely convertin
 
 `develop` is the development source of truth.
 
-The current milestone is intentionally limited to the **Golden Dataset + Acceptance Criteria baseline**. No processing engine, OCR, generative AI, or archive integration is included yet.
+The current milestone is the **Golden Dataset + Acceptance Criteria baseline**. It now includes 12 manifest-only bootstrap fixtures, a local ingest CLI, schema validation, and CI validation. No image-processing engine or OCR is included yet.
 
 ## Baseline documents
 
@@ -16,6 +16,7 @@ The current milestone is intentionally limited to the **Golden Dataset + Accepta
 - [Test taxonomy](docs/test-taxonomy.md)
 - [Golden Dataset schema](datasets/golden/manifest.schema.json)
 - [Example manifest](datasets/golden/manifest.example.json)
+- [Golden Dataset usage](docs/golden-dataset-usage.md)
 
 ## Safety principle
 
