@@ -6,7 +6,7 @@ ScanFix is a Windows-focused document rectification utility for safely convertin
 
 `develop` is the development source of truth.
 
-The project now includes the **Golden Dataset baseline** and **Geometry Engine V0.1**. The engine provides conservative page detection, manual-corner fallback, perspective rectification, deskew, CLI reporting, unit tests, and CI validation. OCR and generative processing remain out of scope.
+The project now includes the **Golden Dataset baseline** and **Geometry Engine V0.2**. The engine provides conservative multi-pass page detection, confidence gating, manual-corner fallback, perspective rectification, deskew, basic quality warnings, preview overlays, raster PDF export, local Golden Dataset evaluation, unit tests, and CI validation. OCR and generative processing remain out of scope.
 
 ## Baseline documents
 
@@ -18,6 +18,7 @@ The project now includes the **Golden Dataset baseline** and **Geometry Engine V
 - [Example manifest](datasets/golden/manifest.example.json)
 - [Golden Dataset usage](docs/golden-dataset-usage.md)
 - [Geometry Engine V0.1](docs/geometry-engine-v0.1.md)
+- [Geometry Engine V0.2](docs/geometry-engine-v0.2.md)
 
 ## Safety principle
 
@@ -31,7 +32,7 @@ Real administrative documents, IDs, signatures, stamps, and private WhatsApp med
 
 ## Current engine milestone
 
-Geometry Engine V0.1 implements:
+Geometry Engine V0.2 implements:
 
 1. source SHA-256 reporting
 2. page-boundary detection with confidence gating
@@ -39,6 +40,10 @@ Geometry Engine V0.1 implements:
 4. perspective rectification
 5. residual deskew
 6. safe review routing when auto-detection is uncertain
-7. unit tests and GitHub Actions validation
+7. quality warnings without altering the document
+8. preview overlays for detected corners
+9. optional PDF export
+10. local Golden Dataset evaluation
+11. unit tests and GitHub Actions validation
 
-Next: run the engine against real Golden Dataset images, tune thresholds from evidence, then add PDF export. OCR, ML dewarping, batch processing, and generative enhancement remain out of scope.
+Next: run V0.2 against real local Golden Dataset images and tune thresholds from evidence. OCR, ML dewarping, batch processing, and generative enhancement remain out of scope.
