@@ -1,7 +1,7 @@
-"""Deterministic document geometry helpers for ScanFix V0.1.
+"""Deterministic document geometry helpers for ScanFix V0.2.
 
 Scope:
-- page boundary detection
+- conservative page boundary detection
 - four-corner ordering
 - perspective rectification
 - small-angle deskew
@@ -24,6 +24,7 @@ class DetectionResult:
     confidence: float
     needs_review: bool
     reason: str
+    area_ratio: float = 0.0
 
 
 def order_points(points: Iterable[Iterable[float]]) -> np.ndarray:
@@ -36,10 +37,10 @@ def order_points(points: Iterable[Iterable[float]]) -> np.ndarray:
     sums = pts.sum(axis=1)
     diffs = np.diff(pts, axis=1).reshape(-1)
 
-    ordered[0] = pts[np.argmin(sums)]   # TL
-    ordered[2] = pts[np.argmax(sums)]   # BR
-    ordered[1] = pts[np.argmin(diffs)]  # TR
-    ordered[3] = pts[np.argmax(diffs)]  # BL
+    ordered[0] = pts[np.argmin(sums)]
+    ordered[2] = pts[np.argmax(sums)]
+    ordered[1] = pts[np.argmin(diffs)]
+    ordered[3] = pts[np.argmax(diffs)]
     return ordered
 
 
@@ -47,14 +48,45 @@ def _resize_for_detection(image: np.ndarray, max_dim: int = 1800) -> tuple[np.nd
     h, w = image.shape[:2]
     scale = 1.0
     longest = max(h, w)
+
     if longest > max_dim:
         scale = max_dim / float(longest)
-        resized = cv2.resize(image, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
+        resized = cv2.resize(
+            image,
+            (round(w * scale), round(h * scale)),
+            interpolation=cv2.INTER_AREA,
+        )
         return resized, scale
+
     return image.copy(), scale
 
 
-def _quad_score(quad: np.ndarray, image_area: float) -> tuple[float, float]:
+def _border_proximity(quad: np.ndarray, width: int, height: int) -> float:
+    """Return how strongly a quad hugs all image borders.
+
+    Full-frame contours are common false positives. A high value is a mild penalty,
+    not an automatic rejection, because some documents legitimately fill the frame.
+    """
+    pts = order_points(quad)
+    margin_x = max(width * 0.03, 1.0)
+    margin_y = max(height * 0.03, 1.0)
+
+    close = 0
+    for x, y in pts:
+        if x <= margin_x or x >= width - margin_x:
+            close += 1
+        if y <= margin_y or y >= height - margin_y:
+            close += 1
+
+    return min(close / 8.0, 1.0)
+
+
+def _quad_score(
+    quad: np.ndarray,
+    image_area: float,
+    width: int,
+    height: int,
+) -> tuple[float, float]:
     area = abs(cv2.contourArea(quad.astype(np.float32)))
     area_ratio = area / max(image_area, 1.0)
 
@@ -62,61 +94,99 @@ def _quad_score(quad: np.ndarray, image_area: float) -> tuple[float, float]:
     box_area = max(rect[1][0] * rect[1][1], 1.0)
     rectangularity = min(area / box_area, 1.0)
 
-    # Favor a page occupying a meaningful part of the frame and having a stable quadrilateral.
-    area_score = float(np.clip((area_ratio - 0.18) / 0.62, 0.0, 1.0))
-    confidence = 0.65 * area_score + 0.35 * rectangularity
+    area_score = float(np.clip((area_ratio - 0.16) / 0.68, 0.0, 1.0))
+    border_penalty = 0.15 * _border_proximity(quad, width, height)
+
+    confidence = (0.62 * area_score) + (0.38 * rectangularity) - border_penalty
+    confidence = float(np.clip(confidence, 0.0, 1.0))
     return confidence, area_ratio
+
+
+def _edge_variants(gray: np.ndarray) -> list[np.ndarray]:
+    """Produce a small deterministic set of edge maps for difficult phone photos."""
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    variants: list[np.ndarray] = []
+    for low, high in ((35, 105), (50, 150), (75, 200)):
+        edges = cv2.Canny(blur, low, high)
+        edges = cv2.dilate(edges, np.ones((3, 3), np.uint8), iterations=1)
+        variants.append(edges)
+
+    # Contrast-normalized pass helps with weak page/background separation.
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(blur)
+    edges = cv2.Canny(clahe, 45, 135)
+    edges = cv2.dilate(edges, np.ones((3, 3), np.uint8), iterations=1)
+    variants.append(edges)
+
+    return variants
 
 
 def detect_document(image: np.ndarray, min_confidence: float = 0.72) -> DetectionResult:
     """Detect the most plausible page quadrilateral.
 
-    Returns a safe failure when no strong quadrilateral is found.
+    The detector tries a few conservative edge maps and returns a safe review state
+    when confidence is insufficient.
     """
     if image is None or image.size == 0:
-        return DetectionResult(None, 0.0, True, "empty-image")
+        return DetectionResult(None, 0.0, True, "empty-image", 0.0)
 
     work, scale = _resize_for_detection(image)
     gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY) if work.ndim == 3 else work.copy()
 
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, 50, 150)
-    edges = cv2.dilate(edges, np.ones((3, 3), np.uint8), iterations=1)
-
-    contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:20]
-
     image_area = float(work.shape[0] * work.shape[1])
-    best_quad = None
+    height, width = work.shape[:2]
+
+    best_quad: np.ndarray | None = None
     best_confidence = 0.0
     best_area_ratio = 0.0
 
-    for contour in contours:
-        perimeter = cv2.arcLength(contour, True)
-        if perimeter <= 0:
-            continue
+    for edges in _edge_variants(gray):
+        contours, _ = cv2.findContours(
+            edges,
+            cv2.RETR_LIST,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
 
-        approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
-        if len(approx) != 4 or not cv2.isContourConvex(approx):
-            continue
+        for contour in contours:
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter <= 0:
+                continue
 
-        quad = approx.reshape(4, 2).astype(np.float32)
-        confidence, area_ratio = _quad_score(quad, image_area)
+            for epsilon_ratio in (0.015, 0.02, 0.025):
+                approx = cv2.approxPolyDP(
+                    contour,
+                    epsilon_ratio * perimeter,
+                    True,
+                )
+                if len(approx) != 4 or not cv2.isContourConvex(approx):
+                    continue
 
-        if confidence > best_confidence:
-            best_quad = quad
-            best_confidence = confidence
-            best_area_ratio = area_ratio
+                quad = approx.reshape(4, 2).astype(np.float32)
+                confidence, area_ratio = _quad_score(
+                    quad,
+                    image_area,
+                    width,
+                    height,
+                )
+
+                if confidence > best_confidence:
+                    best_quad = quad
+                    best_confidence = confidence
+                    best_area_ratio = area_ratio
 
     if best_quad is None:
-        return DetectionResult(None, 0.0, True, "no-quadrilateral")
+        return DetectionResult(None, 0.0, True, "no-quadrilateral", 0.0)
 
     corners = order_points(best_quad / scale)
     needs_review = best_confidence < min_confidence
 
     reason = "ok"
-    if best_area_ratio < 0.25:
+    if best_area_ratio < 0.22:
         reason = "page-too-small-or-ambiguous"
+        needs_review = True
+    elif best_area_ratio > 0.985:
+        reason = "full-frame-ambiguous"
         needs_review = True
     elif needs_review:
         reason = "low-confidence"
@@ -126,6 +196,7 @@ def detect_document(image: np.ndarray, min_confidence: float = 0.72) -> Detectio
         confidence=round(float(best_confidence), 4),
         needs_review=needs_review,
         reason=reason,
+        area_ratio=round(float(best_area_ratio), 4),
     )
 
 
@@ -146,7 +217,9 @@ def perspective_rectify(image: np.ndarray, corners: np.ndarray) -> np.ndarray:
         [[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]],
         dtype=np.float32,
     )
+
     matrix = cv2.getPerspectiveTransform(pts, dst)
+
     return cv2.warpPerspective(
         image,
         matrix,
@@ -174,6 +247,7 @@ def estimate_skew_angle(image: np.ndarray, max_abs_angle: float = 7.0) -> float:
         minLineLength=min_len,
         maxLineGap=12,
     )
+
     if lines is None:
         return 0.0
 
@@ -181,10 +255,12 @@ def estimate_skew_angle(image: np.ndarray, max_abs_angle: float = 7.0) -> float:
     for line in lines[:, 0]:
         x1, y1, x2, y2 = map(float, line)
         angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
+
         while angle <= -90:
             angle += 180
         while angle > 90:
             angle -= 180
+
         if abs(angle) <= max_abs_angle:
             angles.append(float(angle))
 
@@ -213,6 +289,7 @@ def rotate_expand(image: np.ndarray, angle_deg: float) -> np.ndarray:
     matrix[1, 2] += (new_h / 2.0) - center[1]
 
     border = 255 if image.ndim == 2 else (255, 255, 255)
+
     return cv2.warpAffine(
         image,
         matrix,
@@ -226,6 +303,8 @@ def rotate_expand(image: np.ndarray, angle_deg: float) -> np.ndarray:
 def deskew(image: np.ndarray, max_abs_angle: float = 7.0) -> tuple[np.ndarray, float]:
     """Estimate and correct small residual skew."""
     angle = estimate_skew_angle(image, max_abs_angle=max_abs_angle)
+
     if abs(angle) < 0.15:
         return image.copy(), 0.0
+
     return rotate_expand(image, -angle), angle
