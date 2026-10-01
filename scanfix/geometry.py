@@ -17,6 +17,8 @@ from typing import Iterable
 import cv2
 import numpy as np
 
+from scanfix.segmentation import detect_bright_page_candidate
+
 
 @dataclass(frozen=True)
 class DetectionResult:
@@ -174,6 +176,23 @@ def detect_document(image: np.ndarray, min_confidence: float = 0.72) -> Detectio
                     best_quad = quad
                     best_confidence = confidence
                     best_area_ratio = area_ratio
+
+    edge_is_weak = (
+        best_quad is None
+        or best_area_ratio < 0.22
+        or best_confidence < min_confidence
+    )
+
+    if edge_is_weak:
+        fallback = detect_bright_page_candidate(image)
+        if fallback.corners is not None:
+            return DetectionResult(
+                corners=fallback.corners,
+                confidence=fallback.confidence,
+                needs_review=fallback.needs_review,
+                reason=fallback.reason,
+                area_ratio=fallback.area_ratio,
+            )
 
     if best_quad is None:
         return DetectionResult(None, 0.0, True, "no-quadrilateral", 0.0)
