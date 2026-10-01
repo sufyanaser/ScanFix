@@ -26,6 +26,7 @@ from scanfix.geometry import detect_document, deskew, order_points, perspective_
 from scanfix.pdf_export import export_pdf
 from scanfix.quality import analyze_quality
 from scanfix.preview import draw_detection_preview
+from scanfix.review import load_review_file
 
 
 def sha256_file(path: Path) -> str:
@@ -58,7 +59,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Conservative document geometry correction.")
     ap.add_argument("input", type=Path)
     ap.add_argument("output", type=Path, help="Output PNG/JPEG/TIFF path")
-    ap.add_argument("--corners", type=parse_corners, help="Manual corners: TL/TR/BR/BL coordinates")
+    manual_group = ap.add_mutually_exclusive_group()\n    manual_group.add_argument("--corners", type=parse_corners, help="Manual corners: TL/TR/BR/BL coordinates")\n    manual_group.add_argument("--corners-file", type=Path, help="Approved review.json from the corner editor")
     ap.add_argument("--min-confidence", type=float, default=0.72)
     ap.add_argument("--no-deskew", action="store_true")
     ap.add_argument("--report", type=Path, help="Optional JSON report path")
@@ -90,13 +91,13 @@ def main() -> int:
 
     quality = analyze_quality(image)
 
-    manual = args.corners is not None
+    manual = args.corners is not None or args.corners_file is not None
     area_ratio = 0.0
 
     if manual:
-        corners = args.corners
+        corners = args.corners if args.corners is not None else load_review_file(args.corners_file.expanduser().resolve())
         confidence = 1.0
-        detection_reason = "manual-corners"
+        detection_reason = "manual-review-file" if args.corners_file is not None else "manual-corners"
         needs_review = False
     else:
         detection = detect_document(image, min_confidence=args.min_confidence)
