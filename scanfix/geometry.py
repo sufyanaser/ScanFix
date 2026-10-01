@@ -326,4 +326,4 @@ def deskew(image: np.ndarray, max_abs_angle: float = 7.0) -> tuple[np.ndarray, f
     if abs(angle) < 0.15:
         return image.copy(), 0.0
 
-    return rotate_expand(image, -angle), angle
+    return rotate_expand(image, angle), angle
